@@ -4,7 +4,11 @@ Minimal MusicXML visualizer for revealing engraved sheet music during playback.
 
 ## Demo
 
-<video src="media/sheetvis-v1-demo.mp4" controls width="100%"></video>
+
+
+https://github.com/user-attachments/assets/3800d64b-c292-4621-b0f7-b01ec775928e
+
+
 
 Note: the v1 demo video was edited in post to fit the audio with the visual timings.
 
