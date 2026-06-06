@@ -138,12 +138,9 @@ function parsePart(partNode, partNames) {
       }
 
       const noteNode = child;
-      if (firstChild(noteNode, "grace")) {
-        continue;
-      }
-
-      const durationDivisions = number(text(noteNode, "duration"), 0);
-      const durationBeats = durationDivisions / divisions;
+      const isGrace = Boolean(firstChild(noteNode, "grace"));
+      const durationDivisions = isGrace ? 0 : number(text(noteNode, "duration"), 0);
+      const durationBeats = isGrace ? 0 : durationDivisions / divisions;
       const isChord = Boolean(firstChild(noteNode, "chord"));
       const voice = number(text(noteNode, "voice"), 1);
       const staffNumber = number(text(noteNode, "staff"), 1);
@@ -171,6 +168,7 @@ function parsePart(partNode, partNames) {
         durationSeconds: 0,
         revealOnsetBeats,
         revealOnsetSeconds: 0,
+        isGrace,
         voice,
         staffNumber,
         accidental: text(noteNode, "accidental") || null,
@@ -191,7 +189,7 @@ function parsePart(partNode, partNames) {
         activeTies.delete(tieKey);
       }
 
-      if (!isChord) {
+      if (!isChord && !isGrace) {
         const nextBeat = onsetBeats + durationBeats;
         voiceCursors.set(voiceKey, nextBeat);
         measureCursorBeat = nextBeat;

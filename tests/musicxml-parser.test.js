@@ -285,3 +285,45 @@ test("ensureMusicXmlNoteIds injects stable ids into notes that need them", () =>
   assert.match(prepared, /<note id="sheetvis-note-1">/);
   assert.match(prepared, /<note id="kept">/);
 });
+
+test("parseMusicXml keeps grace notes in the reveal timeline without advancing time", () => {
+  const scoreXml = `
+    <score-partwise>
+      <part-list><score-part id="P1"><part-name>Alto Sax</part-name></score-part></part-list>
+      <part id="P1">
+        <measure number="1">
+          <attributes><divisions>4</divisions><time><beats>4</beats><beat-type>4</beat-type></time></attributes>
+          <note id="grace-a">
+            <grace/>
+            <pitch><step>D</step><octave>5</octave></pitch>
+            <type>eighth</type>
+            <beam number="1">begin</beam>
+          </note>
+          <note id="main-a">
+            <pitch><step>E</step><octave>5</octave></pitch>
+            <duration>4</duration>
+            <type>quarter</type>
+            <beam number="1">end</beam>
+          </note>
+          <note id="main-b">
+            <pitch><step>F</step><octave>5</octave></pitch>
+            <duration>4</duration>
+            <type>quarter</type>
+          </note>
+        </measure>
+      </part>
+    </score-partwise>
+  `;
+
+  const score = parseMusicXml(scoreXml);
+  const notes = score.parts[0].staves[0].measures[0].notes;
+
+  assert.equal(notes[0].id, "grace-a");
+  assert.equal(notes[0].isGrace, true);
+  assert.equal(notes[0].durationBeats, 0);
+  assert.equal(notes[0].onsetBeats, 0);
+  assert.equal(notes[1].id, "main-a");
+  assert.equal(notes[1].onsetBeats, 0);
+  assert.equal(notes[2].id, "main-b");
+  assert.equal(notes[2].onsetBeats, 1);
+});

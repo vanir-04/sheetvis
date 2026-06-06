@@ -305,14 +305,16 @@ function annotateEventGeometry(svg, className, tagNames, notePositions) {
       `<(${tagNames.join("|")})\\b(?![^>]*class="note")(?![^>]*data-sheetvis-beam-for)([^>]*)>?(?:</\\1>)?`,
       "g",
     );
-    return eventPrefix.replace(geometryPattern, (match, tagName, attributes) => {
+    return eventPrefix.replace(geometryPattern, (match, tagName, attributes, offset) => {
       if (tagName === "g" && !/\bclass="[^"]*\b(?:tupletBracket|tupletNum)\b[^"]*"/.test(match)) {
         return match;
       }
 
+      const forceFirstTupletEvent = className === "tuplet" && isInsideTupletMarker(eventPrefix, offset);
+
       if (tagName === "polygon") {
         const center = elementCenter(attributes);
-        const noteId = noteIdForEventGeometry(center, notePositions, firstNoteId, {
+        const noteId = forceFirstTupletEvent ? firstNoteId : noteIdForEventGeometry(center, notePositions, firstNoteId, {
           allowFallback: className === "tuplet",
         });
         if (!noteId) {
@@ -335,7 +337,7 @@ function annotateEventGeometry(svg, className, tagNames, notePositions) {
       }
 
       const center = elementCenter(attributes);
-      const noteId = noteIdForEventGeometry(center, notePositions, firstNoteId, {
+      const noteId = forceFirstTupletEvent ? firstNoteId : noteIdForEventGeometry(center, notePositions, firstNoteId, {
         allowFallback: className === "tuplet",
       });
       if (!noteId) {
@@ -347,6 +349,20 @@ function annotateEventGeometry(svg, className, tagNames, notePositions) {
       );
     });
   });
+}
+
+function isInsideTupletMarker(source, offset) {
+  const stack = [];
+  const tokenPattern = /<g\b[^>]*class="([^"]*)"[^>]*>|<\/g>/g;
+  for (const match of source.slice(0, offset).matchAll(tokenPattern)) {
+    if (match[0].startsWith("</g")) {
+      stack.pop();
+    } else {
+      stack.push(match[1]);
+    }
+  }
+
+  return stack.some((className) => /\b(?:tupletBracket|tupletNum)\b/.test(className));
 }
 
 function splitBeamPolygon(attributes, notePositions) {

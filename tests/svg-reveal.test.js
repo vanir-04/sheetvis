@@ -649,6 +649,31 @@ test("annotateBeamShapes labels tuplet brackets with the first tuplet note", () 
   assert.doesNotMatch(annotated, /data-sheetvis-beam-for="note-b"/);
 });
 
+test("annotateBeamShapes labels both halves of a Verovio tuplet bracket with the first tuplet event", () => {
+  const svg = `
+    <svg>
+      <g id="tuplet-1" class="tuplet">
+        <g id="tuplet-number" class="tupletNum"><use transform="translate(500, 10)" /></g>
+        <g id="tuplet-bracket" class="tupletBracket">
+          <polyline points="90,90 90,130 450,130" />
+          <polyline points="900,90 900,130 550,130" />
+        </g>
+        <g id="note-a" class="note"><g class="notehead"><use transform="translate(100, 300)" /></g></g>
+        <g id="note-b" class="note"><g class="notehead"><use transform="translate(500, 300)" /></g></g>
+        <g id="note-c" class="note"><g class="notehead"><use transform="translate(900, 300)" /></g></g>
+      </g>
+    </svg>
+  `;
+
+  const annotated = annotateBeamShapes(svg);
+
+  assert.match(annotated, /<polyline data-sheetvis-beam-for="note-a" points="90,90 90,130 450,130"/);
+  assert.match(annotated, /<polyline data-sheetvis-beam-for="note-a" points="900,90 900,130 550,130"/);
+  assert.match(annotated, /<use data-sheetvis-beam-for="note-a" transform="translate\(500, 10\)"/);
+  assert.doesNotMatch(annotated, /data-sheetvis-beam-for="note-b"/);
+  assert.doesNotMatch(annotated, /data-sheetvis-beam-for="note-c"/);
+});
+
 test("applySvgRevealStyles reveals tuplet number child glyphs with the owning beamed note", () => {
   const score = {
     totalBeats: 1,
