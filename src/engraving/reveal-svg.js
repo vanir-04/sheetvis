@@ -10,6 +10,9 @@ const ledgerNoteMaxDistance = 450;
 const stemNoteMaxDistance = 1400;
 const tieNoteMaxDistance = 900;
 const markingNoteMaxDistance = 2200;
+const tupletNumberGlyphHeight = 340;
+const tupletNumberNearBeamPadding = 60;
+const tupletNumberSmallNudge = 75;
 
 const hiddenClasses = [
   ".note",
@@ -18,6 +21,8 @@ const hiddenClasses = [
   ".beamSpan",
   ".stem",
   ".tie",
+  ".gliss",
+  ".slide",
   ".tupletBracket > *",
   ".tupletNum > *",
   ".dots",
@@ -46,15 +51,17 @@ export function createHiddenNotationCss(staffColor, { syncMarkings = true } = {}
   ].join("\n");
 }
 
-export function prepareRevealSvg(svg) {
+export function prepareRevealSvg(svg, score = null) {
   if (svg.includes('data-sheetvis-prepared="true"')) {
     return svg;
   }
 
   return annotateMarkingShapes(
     annotateTieShapes(
-      annotateBeamShapes(
-        annotateAttachedNoteSymbols(annotateStemShapes(annotateLedgerLines(svg))),
+      annotateGlissShapes(
+        annotateBeamShapes(
+          annotateAttachedNoteSymbols(annotateStemShapes(annotateLedgerLines(svg))),
+        ),
       ),
     ),
   ).replace(
@@ -79,7 +86,7 @@ export function revealStateKey(score, currentTimeSeconds, { animateRests = false
 }
 
 export function applySvgRevealStyles({ svg, score, config, currentTimeSeconds }) {
-  let annotatedSvg = prepareRevealSvg(svg);
+  let annotatedSvg = prepareRevealSvg(svg, score);
   const rules = [];
   const syncMarkings = config.reveal?.syncMarkings !== false;
   const animateRests = config.reveal?.animateRests === true;
@@ -101,6 +108,8 @@ export function applySvgRevealStyles({ svg, score, config, currentTimeSeconds })
       const tieSelector = `[data-sheetvis-tie-for="${cssStringEscape(note.id)}"]`;
       const stemSelector = `[data-sheetvis-stem-for="${cssStringEscape(note.id)}"]`;
       const symbolSelector = `[data-sheetvis-symbol-for="${cssStringEscape(note.id)}"]`;
+      const glissDataSelector = `[data-sheetvis-gliss-for="${cssStringEscape(note.id)}"]`;
+      const glissSelector = scopedRevealSelector(glissDataSelector, rootId);
       const noteRules = [
         `${selector} { visibility: visible; fill: ${color}; stroke: ${color}; }`,
         `${selector} * { visibility: visible; fill: ${color}; stroke: ${color}; }`,
@@ -112,6 +121,8 @@ export function applySvgRevealStyles({ svg, score, config, currentTimeSeconds })
         `${symbolSelector} { visibility: visible; fill: ${color}; stroke: ${color}; }`,
         `${symbolSelector} * { visibility: visible; fill: ${color}; stroke: ${color}; }`,
         `${symbolSelector} use, ${symbolSelector} text, ${symbolSelector} ellipse { stroke: none; }`,
+        `${glissSelector} { visibility: visible !important; fill: ${color}; stroke: ${color}; }`,
+        `${glissSelector} * { visibility: visible !important; fill: ${color}; stroke: ${color}; }`,
       ];
 
       if (syncMarkings) {
@@ -272,6 +283,25 @@ export function annotateTieShapes(svg) {
   ));
 }
 
+export function annotateGlissShapes(svg) {
+  const notePositions = collectNotePositions(svg);
+  return svg.replace(
+    /<g\b(?=[^>]*class="[^"]*\b(?:gliss|slide)\b[^"]*")(?![^>]*data-sheetvis-gliss-for)[^>]*>[\s\S]*?<\/g>/g,
+    (glissGroup) => {
+      const pathAttributes = glissGroup.match(/<path\b([^>]*)\/>/)?.[1] || "";
+      const startPoint = geometryStartPoint(pathAttributes);
+      const noteId = startPoint
+        ? nearestNoteIdWithinDistance(startPoint, notePositions, tieNoteMaxDistance)
+        : nearestNoteId(geometryLeftX(pathAttributes), notePositions);
+      if (!noteId) {
+        return glissGroup;
+      }
+
+      return glissGroup.replace("<g", `<g data-sheetvis-gliss-for="${escapeAttribute(noteId)}"`);
+    },
+  );
+}
+
 export function annotateMarkingShapes(svg) {
   const notePositions = collectNotePositions(svg);
   return svg.replace(
@@ -299,7 +329,9 @@ function annotateEventGeometry(svg, className, tagNames, notePositions) {
     );
 
   return svg.replace(groupPattern, (eventPrefix) => {
-    const firstNoteId = findNextNoteId(svg.slice(svg.indexOf(eventPrefix) + eventPrefix.length - 1));
+    const eventStart = svg.indexOf(eventPrefix);
+    const eventContext = `${svg.slice(Math.max(0, eventStart - 2500), eventStart)}${eventPrefix}`;
+    const firstNoteId = findNextNoteId(svg.slice(eventStart + eventPrefix.length - 1));
 
     const geometryPattern = new RegExp(
       `<(${tagNames.join("|")})\\b(?![^>]*class="note")(?![^>]*data-sheetvis-beam-for)([^>]*)>?(?:</\\1>)?`,
@@ -310,7 +342,8 @@ function annotateEventGeometry(svg, className, tagNames, notePositions) {
         return match;
       }
 
-      const forceFirstTupletEvent = className === "tuplet" && isInsideTupletMarker(eventPrefix, offset);
+      const tupletMarkerClass = className === "tuplet" ? tupletMarkerClassAt(eventPrefix, offset) : null;
+      const forceFirstTupletEvent = Boolean(tupletMarkerClass);
 
       if (tagName === "polygon") {
         const center = elementCenter(attributes);
@@ -336,7 +369,10 @@ function annotateEventGeometry(svg, className, tagNames, notePositions) {
         );
       }
 
-      const center = elementCenter(attributes);
+      const nextAttributes = tagName === "use" && tupletMarkerClass === "tupletNum"
+        ? lightlyNudgeBelowBeamTupletNumber(attributes, eventContext)
+        : attributes;
+      const center = elementCenter(nextAttributes);
       const noteId = forceFirstTupletEvent ? firstNoteId : noteIdForEventGeometry(center, notePositions, firstNoteId, {
         allowFallback: className === "tuplet",
       });
@@ -346,12 +382,12 @@ function annotateEventGeometry(svg, className, tagNames, notePositions) {
       return match.replace(
         `<${tagName}`,
         `<${tagName} data-sheetvis-beam-for="${escapeAttribute(noteId)}"`,
-      );
+      ).replace(attributes, nextAttributes);
     });
   });
 }
 
-function isInsideTupletMarker(source, offset) {
+function tupletMarkerClassAt(source, offset) {
   const stack = [];
   const tokenPattern = /<g\b[^>]*class="([^"]*)"[^>]*>|<\/g>/g;
   for (const match of source.slice(0, offset).matchAll(tokenPattern)) {
@@ -362,7 +398,46 @@ function isInsideTupletMarker(source, offset) {
     }
   }
 
-  return stack.some((className) => /\b(?:tupletBracket|tupletNum)\b/.test(className));
+  for (let index = stack.length - 1; index >= 0; index -= 1) {
+    const markerClass = stack[index]?.match(/\b(tupletBracket|tupletNum)\b/)?.[1];
+    if (markerClass) {
+      return markerClass;
+    }
+  }
+
+  return null;
+}
+
+function lightlyNudgeBelowBeamTupletNumber(attributes, eventPrefix) {
+  const center = transformCenter(attributes);
+  const beamBounds = beamPolygonBounds(eventPrefix);
+  if (!center || !beamBounds || center.y <= beamBounds.bottom) {
+    return attributes;
+  }
+
+  const glyphTop = center.y - tupletNumberGlyphHeight;
+  if (glyphTop > beamBounds.bottom + tupletNumberNearBeamPadding) {
+    return attributes;
+  }
+
+  const nextY = formatNumber(center.y + tupletNumberSmallNudge);
+  return attributes.replace(
+    /translate\((-?\d+(?:\.\d+)?)([ ,]+)-?\d+(?:\.\d+)?\)/,
+    `translate($1$2${nextY})`,
+  );
+}
+
+function beamPolygonBounds(source) {
+  const points = Array.from(source.matchAll(/<polygon\b([^>]*)\/>/g))
+    .flatMap((match) => polygonPoints(match[1]));
+  if (points.length === 0) {
+    return null;
+  }
+
+  return {
+    top: Math.min(...points.map((point) => point.y)),
+    bottom: Math.max(...points.map((point) => point.y)),
+  };
 }
 
 function splitBeamPolygon(attributes, notePositions) {

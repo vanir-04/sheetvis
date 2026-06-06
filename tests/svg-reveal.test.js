@@ -22,6 +22,7 @@ test("createHiddenNotationCss hides note event glyphs while keeping staff struct
   assert.match(css, /\.beamSpan/);
   assert.match(css, /\.stem/);
   assert.match(css, /\.tie/);
+  assert.match(css, /\.gliss/);
   assert.match(css, /\.ledgerLines/);
   assert.match(css, /\.accid/);
   assert.match(css, /\.dynam/);
@@ -497,6 +498,53 @@ test("applySvgRevealStyles reveals tie shapes with tied notes", () => {
   assert.match(styled, /\[data-sheetvis-tie-for="tie-stop"\] \{ visibility: visible/);
 });
 
+test("applySvgRevealStyles reveals glissando and slide lines with the starting note", () => {
+  const score = {
+    totalBeats: 3,
+    parts: [
+      {
+        staves: [
+          {
+            measures: [
+              {
+                notes: [
+                  { id: "note-a", isRest: false, onsetSeconds: 0, onsetBeats: 0 },
+                  { id: "note-b", isRest: false, onsetSeconds: 2, onsetBeats: 2 },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+  const svg = `
+    <svg id="score-root">
+      <g id="note-a" class="note"><g class="notehead"><use transform="translate(100, 100)" /></g></g>
+      <g id="note-b" class="note"><g class="notehead"><use transform="translate(400, 200)" /></g></g>
+      <g id="slide-a" class="gliss slide"><path d="M110 110 L390 190" stroke-width="27" /></g>
+    </svg>
+  `;
+
+  const before = applySvgRevealStyles({
+    svg,
+    score,
+    config: createConfig(),
+    currentTimeSeconds: -0.1,
+  });
+  const after = applySvgRevealStyles({
+    svg,
+    score,
+    config: createConfig(),
+    currentTimeSeconds: 0,
+  });
+
+  assert.match(before, /\.gliss, \.slide, \.tupletBracket > \*/);
+  assert.doesNotMatch(before, /\[data-sheetvis-gliss-for="note-a"\] \{ visibility: visible/);
+  assert.match(after, /<g data-sheetvis-gliss-for="note-a" id="slide-a" class="gliss slide"/);
+  assert.match(after, /\[data-sheetvis-gliss-for="note-a"\], #score-root \[data-sheetvis-gliss-for="note-a"\] \{ visibility: visible !important/);
+});
+
 test("annotateTieShapes labels ties with the starting note when the stop note is off page", () => {
   const svg = `
     <svg>
@@ -672,6 +720,27 @@ test("annotateBeamShapes labels both halves of a Verovio tuplet bracket with the
   assert.match(annotated, /<use data-sheetvis-beam-for="note-a" transform="translate\(500, 10\)"/);
   assert.doesNotMatch(annotated, /data-sheetvis-beam-for="note-b"/);
   assert.doesNotMatch(annotated, /data-sheetvis-beam-for="note-c"/);
+});
+
+test("annotateBeamShapes lightly nudges close below-beam tuplet numbers", () => {
+  const svg = `
+    <svg>
+      <g id="beam-1" class="beam">
+        <polygon points="100,300 500,260 500,170 100,210" />
+        <g id="tuplet-1" class="tuplet">
+          <g id="tuplet-number" class="tupletNum">
+            <use transform="translate(250, 520) scale(0.72, 0.72)" />
+          </g>
+          <g id="note-a" class="note"><g class="notehead"><use transform="translate(100, 100)" /></g></g>
+          <g id="note-b" class="note"><g class="notehead"><use transform="translate(500, 100)" /></g></g>
+        </g>
+      </g>
+    </svg>
+  `;
+
+  const annotated = annotateBeamShapes(svg);
+
+  assert.match(annotated, /transform="translate\(250, 595\) scale\(0\.72, 0\.72\)"/);
 });
 
 test("applySvgRevealStyles reveals tuplet number child glyphs with the owning beamed note", () => {
@@ -921,7 +990,7 @@ test("applySvgRevealStyles injects final hidden css before any notes reveal", ()
   });
 
   assert.match(styled, /data-sheetvis-hidden="true"/);
-  assert.match(styled, /\.note, \.rest, \.beam, \.beamSpan, \.stem, \.tie, \.tupletBracket > \*, \.tupletNum > \*, \.dots, \.bTrem > use, \.fTrem > use, \.ledgerLines path, \.accid, \.dynam, \.hairpin \{ visibility: hidden/);
+  assert.match(styled, /\.note, \.rest, \.beam, \.beamSpan, \.stem, \.tie, \.gliss, \.slide, \.tupletBracket > \*, \.tupletNum > \*, \.dots, \.bTrem > use, \.fTrem > use, \.ledgerLines path, \.accid, \.dynam, \.hairpin \{ visibility: hidden/);
   assert.doesNotMatch(styled, /#future-note \{ visibility: visible/);
 });
 

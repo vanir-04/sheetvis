@@ -179,6 +179,7 @@ function parsePart(partNode, partNames) {
         lyric: text(firstChild(noteNode, "lyric"), "text") || null,
         noteType: text(noteNode, "type") || noteTypeFromDuration(durationBeats),
         dots: noteNode.getElementsByTagName("dot").length,
+        scoop: noteNode.getElementsByTagName("scoop").length > 0,
       };
       notes.push(note);
       previousOnsetBeat = onsetBeats;

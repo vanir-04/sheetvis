@@ -327,3 +327,27 @@ test("parseMusicXml keeps grace notes in the reveal timeline without advancing t
   assert.equal(notes[2].id, "main-b");
   assert.equal(notes[2].onsetBeats, 1);
 });
+
+test("parseMusicXml preserves scoop articulations for synthetic engraving", () => {
+  const scoreXml = `
+    <score-partwise>
+      <part-list><score-part id="P1"><part-name>Bass</part-name></score-part></part-list>
+      <part id="P1">
+        <measure number="1">
+          <attributes><divisions>4</divisions></attributes>
+          <note id="scooped-note">
+            <pitch><step>E</step><octave>3</octave></pitch>
+            <duration>4</duration>
+            <notations>
+              <articulations><scoop line-shape="straight"/></articulations>
+            </notations>
+          </note>
+        </measure>
+      </part>
+    </score-partwise>
+  `;
+
+  const score = parseMusicXml(scoreXml);
+
+  assert.equal(score.parts[0].staves[0].measures[0].notes[0].scoop, true);
+});

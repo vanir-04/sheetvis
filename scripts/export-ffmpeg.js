@@ -62,7 +62,7 @@ async function main() {
       getPageForElement: (id) => engraving.getPageForElement(id),
       currentPage: 1,
     });
-    const preparedSvg = preparedPages.get(pageNumber) || prepareRevealSvg(engraving.renderPage(pageNumber));
+    const preparedSvg = preparedPages.get(pageNumber) || prepareRevealSvg(engraving.renderPage(pageNumber), score);
     preparedPages.set(pageNumber, preparedSvg);
     const revealedSvg = applySvgRevealStyles({
       svg: preparedSvg,

@@ -377,7 +377,7 @@ async function fastExportVideo() {
           getPageForElement: (id) => pagedEngraving.getPageForElement(id),
           currentPage: 1,
         });
-        const preparedSvg = preparedPages.get(pageNumber) || prepareRevealSvg(pagedEngraving.renderPage(pageNumber));
+        const preparedSvg = preparedPages.get(pageNumber) || prepareRevealSvg(pagedEngraving.renderPage(pageNumber), score);
         preparedPages.set(pageNumber, preparedSvg);
         const revealedSvg = applySvgRevealStyles({
           svg: preparedSvg,
@@ -548,7 +548,7 @@ async function renderCurrentPage(revealTimeSeconds = clock.currentTimeSeconds) {
   }
 
   engravingSvg = pagedEngraving.renderPage(currentPage);
-  preparedEngravingSvg = prepareRevealSvg(engravingSvg);
+  preparedEngravingSvg = prepareRevealSvg(engravingSvg, score);
   elements.engravingLayer.innerHTML = preparedEngravingSvg;
   renderedSvgKey = "";
   await updateEngravingFrame(revealTimeSeconds);
@@ -596,7 +596,7 @@ async function renderScrollPages(revealTimeSeconds = clock.currentTimeSeconds) {
       canvas,
       ctx: canvas.getContext("2d"),
       pageNumber,
-      preparedSvg: prepareRevealSvg(svg),
+      preparedSvg: prepareRevealSvg(svg, score),
       renderedKey: "",
     };
   });
