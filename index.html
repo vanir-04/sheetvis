@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SheetVis</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="preview-pane" aria-label="Sheet music preview">
+        <div class="topbar">
+          <div>
+            <h1>SheetVis</h1>
+            <p id="scoreMeta">Demo score</p>
+          </div>
+          <div class="topbar-actions">
+            <label class="file-button">
+              Load MusicXML
+              <input id="fileInput" type="file" accept=".xml,.musicxml,.mxl">
+            </label>
+            <button id="exportButton" type="button">Record WebM</button>
+            <button id="fastExportButton" type="button">Fast Export WebM</button>
+          </div>
+        </div>
+        <div class="score-frame">
+          <div id="scrollLayer" class="scroll-layer" aria-hidden="true"></div>
+          <div id="engravingLayer" class="engraving-layer" aria-hidden="true"></div>
+          <canvas id="scoreCanvas" width="1280" height="720"></canvas>
+        </div>
+      </section>
+
+      <aside class="control-pane" aria-label="Playback and configuration">
+        <section class="transport">
+          <button id="playPauseButton" type="button">Play</button>
+          <label>
+            Speed
+            <select id="speedSelect">
+              <option value="0.25">0.25x</option>
+              <option value="0.5">0.5x</option>
+              <option value="1" selected>1x</option>
+              <option value="1.5">1.5x</option>
+              <option value="2">2x</option>
+            </select>
+          </label>
+          <label>
+            View
+            <select id="viewModeSelect">
+              <option value="page" selected>Page</option>
+              <option value="scroll">Scroll</option>
+            </select>
+          </label>
+        </section>
+
+        <section class="scrub-section">
+          <input id="scrubber" type="range" min="0" max="1" step="0.001" value="0">
+          <div class="time-row">
+            <span id="currentTime">0:00.0</span>
+            <span id="totalTime">0:00.0</span>
+          </div>
+          <div class="page-row">
+            <button id="previousPageButton" type="button">Previous Page</button>
+            <span id="pageStatus">Page 1 / 1</span>
+            <button id="nextPageButton" type="button">Next Page</button>
+          </div>
+        </section>
+
+        <section class="config-section">
+          <div class="section-heading">
+            <h2>Config</h2>
+            <div>
+              <button id="applyConfigButton" type="button">Apply</button>
+              <button id="resetConfigButton" type="button">Reset</button>
+            </div>
+          </div>
+          <div class="config-controls">
+            <label>
+              Background
+              <input id="backgroundColorInput" type="color" value="#ffffff">
+            </label>
+            <label>
+              Notation
+              <input id="staffColorInput" type="color" value="#000000">
+            </label>
+            <label>
+              Measures/page
+              <input id="measuresPerPageInput" type="number" min="0" max="64" step="1" value="0">
+            </label>
+            <label class="checkbox-control">
+              <input id="syncMarkingsInput" type="checkbox" checked>
+              Sync markings
+            </label>
+            <label class="checkbox-control">
+              <input id="animateRestsInput" type="checkbox">
+              Animate rests
+            </label>
+          </div>
+          <div id="partControls" class="part-controls" aria-label="Part colors"></div>
+          <details class="advanced-config">
+            <summary>Advanced JSON</summary>
+            <textarea id="configEditor" spellcheck="false"></textarea>
+          </details>
+          <p id="statusText" role="status"></p>
+          <a id="downloadLink" class="download-link" hidden>Download WebM</a>
+        </section>
+      </aside>
+    </main>
+
+    <script type="module" src="./src/ui/app.js"></script>
+  </body>
+</html>

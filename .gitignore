@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Build and generated output
+dist/
+export/
+tmp/
+docs/
+
+# Local tool installs/downloads
+tools/ffmpeg/
+tools/*.zip
+
+# Local notes and reference captures
+CONTEXT.md
+Context.md
+context.md
+vistest.mp4
+output.mp4
+
+# Local score samples / copyrighted test inputs
+samples/*.musicxml
+samples/*.xml
+
+# Local machine/editor noise
+.env
+.env.*
+*.log
+.DS_Store
+Thumbs.db
